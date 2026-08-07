@@ -20,8 +20,11 @@ export default function Login() {
 
   useEffect(() => {
     api
-      .get("/api/auth/google/url")
-      .then((res) => setGoogleUrl(res.data.url))
+      .get("/auth/google/url")
+      .then((res) => {
+        console.log("Google URL:", res.data.url);
+        setGoogleUrl(res.data.url)
+      })
       .catch(() => {});
   }, []);
 
