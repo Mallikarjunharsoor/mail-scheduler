@@ -1,0 +1,60 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import CSVUploader from "../components/CSVUploader";
+const getDefaultTime = () => {
+    const date = new Date(Date.now() + 60000);
+    return date.toISOString().slice(0, 16);
+};
+export default function Compose() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [from, setFrom] = useState(user?.email || "");
+    const [to, setTo] = useState("");
+    const [subject, setSubject] = useState("");
+    const [body, setBody] = useState("");
+    const [sendAt, setSendAt] = useState(getDefaultTime());
+    const [delayBetweenSeconds, setDelay] = useState(2);
+    const [hourlyLimit, setHourlyLimit] = useState(200);
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState("");
+    const recipients = to
+        .split(/[\n,;]/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+    function handleCSV(rows) {
+        const emails = rows
+            .flat()
+            .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+        setTo(emails.join(", "));
+    }
+    async function submit(e) {
+        e.preventDefault();
+        setLoading(true);
+        setMessage("");
+        try {
+            const res = await api.post("/schedule", {
+                from,
+                to: recipients,
+                subject,
+                body,
+                sendAt: new Date(sendAt).toISOString(),
+                delayBetweenSeconds,
+                hourlyLimit,
+            });
+            setMessage(`${res.data.scheduled} email(s) scheduled successfully`);
+            setTimeout(() => navigate("/scheduled"), 1200);
+        }
+        catch (err) {
+            setMessage(err?.response?.data?.error ||
+                "Unable to schedule email.");
+        }
+        setLoading(false);
+    }
+    return (_jsxs("div", { className: "max-w-5xl mx-auto bg-white rounded-xl shadow p-8", children: [_jsx("h1", { className: "text-3xl font-bold mb-8", children: "Compose Email" }), _jsxs("form", { onSubmit: submit, className: "space-y-6", children: ["        ", _jsxs("div", { className: "grid md:grid-cols-2 gap-6", children: [_jsxs("div", { children: [_jsx("label", { className: "block mb-2 font-semibold", children: "From" }), _jsx("input", { type: "email", value: from, onChange: (e) => setFrom(e.target.value), className: "w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block mb-2 font-semibold", children: "Schedule Time" }), _jsx("input", { type: "datetime-local", value: sendAt, min: getDefaultTime(), onChange: (e) => setSendAt(e.target.value), className: "w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500", required: true })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block mb-2 font-semibold", children: "Recipients" }), _jsx("textarea", { rows: 3, value: to, onChange: (e) => setTo(e.target.value), placeholder: "abc@gmail.com, xyz@gmail.com", className: "w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500", required: true }), _jsx("div", { className: "mt-3", children: _jsx(CSVUploader, { onUpload: handleCSV }) })] }), _jsxs("div", { children: [_jsx("label", { className: "block mb-2 font-semibold", children: "Subject" }), _jsx("input", { value: subject, onChange: (e) => setSubject(e.target.value), className: "w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block mb-2 font-semibold", children: "Message" }), _jsx("textarea", { rows: 10, value: body, onChange: (e) => setBody(e.target.value), className: "w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500", required: true })] }), _jsxs("div", { className: "grid md:grid-cols-2 gap-6", children: [_jsxs("div", { children: [_jsx("label", { className: "block mb-2 font-semibold", children: "Delay Between Emails (Seconds)" }), _jsx("input", { type: "number", value: delayBetweenSeconds, min: 0, onChange: (e) => setDelay(Number(e.target.value)), className: "w-full border rounded-lg px-4 py-3" })] }), _jsxs("div", { children: [_jsx("label", { className: "block mb-2 font-semibold", children: "Hourly Limit" }), _jsx("input", { type: "number", value: hourlyLimit, min: 1, onChange: (e) => setHourlyLimit(Number(e.target.value)), className: "w-full border rounded-lg px-4 py-3" })] })] }), _jsxs("div", { className: "flex justify-between items-center pt-4", children: [_jsxs("div", { className: "text-gray-500", children: [recipients.length, " recipient", recipients.length !== 1 && "s"] }), _jsx("button", { type: "submit", disabled: loading, className: "bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold", children: loading ? "Scheduling..." : "Send Later" })] }), message && (_jsx("div", { className: `mt-4 rounded-lg p-4 ${message.toLowerCase().includes("unable") ||
+                            message.toLowerCase().includes("error")
+                            ? "bg-red-100 text-red-700"
+                            : "bg-green-100 text-green-700"}`, children: message }))] })] }));
+}
