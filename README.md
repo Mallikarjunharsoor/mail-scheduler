@@ -1,34 +1,157 @@
-# ONB Mail Scheduler
+Mail Scheduler
 
-Full-stack email scheduling assignment built with React + TypeScript, Express + TypeScript, PostgreSQL, Redis, BullMQ, Nodemailer/Ethereal, and Google OAuth.
+A full-stack Mail Scheduler application built with React, TypeScript, Express, MySQL, Redis, BullMQ, TypeORM, JWT Authentication, Google OAuth, and Nodemailer.
 
-## Run locally
+The application allows authenticated users to schedule emails for future delivery, monitor scheduled emails, and view successfully sent emails through a modern dashboard.
 
-1. Start the infrastructure: `docker compose up -d postgres redis`
-2. Copy `backend/.env.example` to `backend/.env`, then add Google OAuth and Ethereal credentials.
-3. In one terminal: `cd backend; npm install; npm run dev`
-4. In a second terminal: `cd frontend; npm install; npm run dev`
-5. Open `http://localhost:5173` and use Google sign-in.
+Features
+Backend
+User Authentication (JWT)
+Google OAuth Login
+Schedule emails for future delivery
+Persistent email storage using MySQL
+BullMQ job queue
+Redis-based queue management
+Automatic retry for failed jobs
+Hourly email rate limiting
+Configurable delay between emails
+Concurrent email processing using BullMQ workers
+Email status tracking (Scheduled, Sent, Failed)
+REST API architecture
+TypeORM ORM
+Zod request validation
 
-Google OAuth must have `http://localhost:4000/api/auth/google/callback` registered as an authorized redirect URI. Create a free Ethereal test inbox at https://ethereal.email/create and add the resulting credentials to the backend environment file.
+Frontend
+Secure Login
+Google Login
+Dashboard
+Compose Email
+Schedule Emails
+View Scheduled Emails
+View Sent Emails
+Responsive Sidebar Navigation
+Protected Routes
+Tailwind CSS UI
+Modern Responsive Design
 
-## Architecture
+Technology Stack
+Frontend
+React
+TypeScript
+Vite
+Tailwind CSS
+React Router
+Axios
+Backend
+Node.js
+Express.js
+TypeScript
+TypeORM
+MySQL
+Redis
+BullMQ
+Nodemailer
+JWT
+Google OAuth
 
-The API turns every recipient in a campaign into an individual durable `EmailJob` database row. It assigns a unique BullMQ `jobId` and puts a delayed job in Redis for each row. BullMQ's delayed job data plus the relational data survives API/worker restarts. The worker first checks that the row is still `scheduled`; after it succeeds it marks it `sent`, making duplicated delivery attempts harmless.
+Project Structure
+mailScheduler/
+ 
+    frontend/
+        src/
+        public/
+        package.json
+ 
+    backend/
+        src/
+        models/
+        auth/
+        mailer/
+        package.json
+ 
+    docker-compose.yml
+    package-lock.json
+    README.md
 
-Each worker uses configurable `WORKER_CONCURRENCY`. The Redis `INCR` counter is keyed by sender and UTC hourly window, so it is atomic across workers and instances. If the configured limit is full, the BullMQ job is moved to the next hour rather than being discarded. Per-recipient jobs are initially spaced using the selected delay; this preserves campaign order while allowing safe worker throughput for different campaigns.
 
-For a large campaign (1000+ recipients), the API writes jobs one at a time to avoid a giant in-memory schedule, while Redis retains the delayed queue. Production deployments should use PostgreSQL (`DATABASE_URL`) rather than the SQLite development fallback and run the API and worker as separate replicas if more throughput is needed.
+How to Run the Backend
+1. Install Dependencies
+cd backend
+npm install
+2. Start MySQL
 
-## API
+Ensure MySQL Server is running.
 
-- `POST /api/schedule` schedules an email per recipient.
-- `GET /api/scheduled` lists queue entries for the authenticated user.
-- `GET /api/sent` lists sent and failed messages.
-- `GET /api/health` verifies API + Redis health.
+Create a database named:
 
-## Important trade-offs
+mail_scheduler
+3. Start Redis
 
-- Ethereal is intentionally a test SMTP provider. It is not a delivery service.
-- The OAuth access token here is a compact demo token; replace it with signed, expiring HTTP-only sessions before production.
-- `synchronize` is convenient for the assignment; use migrations in production.
+Run Redis locally.
+4. Configure Environment Variables
+
+Create a .env file inside the backend folder.
+5. Start Backend
+npm run dev
+
+The backend starts
+How to Run the Frontend
+
+Install dependencies
+
+cd frontend
+npm install
+
+Run
+
+npm run dev
+
+The frontend starts
+
+
+Setting Up Ethereal Email
+Create an Ethereal Email account.
+Copy the generated username and password.
+
+
+Architecture Overview
+React Frontend
+       │
+       │ REST API
+       ▼
+Express Backend
+       │
+       ├──────── JWT Authentication
+       │
+       ├──────── MySQL (Persistence)
+       │
+       ├──────── Redis
+       │
+       ▼
+BullMQ Queue
+       │
+       ▼
+Worker
+       │
+       ▼
+Nodemailer
+       │
+       ▼
+SMTP Server
+How Scheduling Works
+User logs in.
+User composes an email.
+Backend validates the request.
+Email details are stored in MySQL.
+A BullMQ job is created.
+Redis stores the queue.
+At the scheduled time, the BullMQ worker processes the job.
+Nodemailer sends the email.
+The email status is updated to Sent or Failed.
+Persistence on Restart
+
+Before scheduling an email, every email is stored in the MySQL database.
+
+BullMQ uses Redis to manage queued jobs.
+
+If the server is restarted, queued jobs remain available and are processed once the backend and Redis are running again.
