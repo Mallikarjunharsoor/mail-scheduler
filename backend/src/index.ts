@@ -32,7 +32,7 @@ app.use(express.json({ limit: '1mb' }));
 const databaseUrl = process.env.DATABASE_URL;
 const dataSource = new DataSource(databaseUrl ? {
   type: databaseUrl.startsWith('mysql') ? 'mysql' : 'postgres', url: databaseUrl,
-  entities: [EmailJob, User], synchronize: process.env.NODE_ENV !== 'production',
+  entities: [EmailJob, User], synchronize: true,
 } : { type: 'sqlite', database: 'db.sqlite', entities: [EmailJob, User], synchronize: true });
 await dataSource.initialize();
 
